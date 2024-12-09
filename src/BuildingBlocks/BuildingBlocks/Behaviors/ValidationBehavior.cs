@@ -16,7 +16,7 @@ namespace BuildingBlocks.Behaviors
 
             var failures =
              validationResults
-             .Where(r => r.Errors.Any())
+             .Where(r => r.Errors.Count != 0)
              .SelectMany(r => r.Errors)
              .ToList();
 
