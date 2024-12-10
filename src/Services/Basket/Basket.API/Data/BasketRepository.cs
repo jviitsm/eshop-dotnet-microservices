@@ -21,7 +21,9 @@
         {
             session.Delete<ShoppingCart>(userName);
             await session.SaveChangesAsync(cancellationToken);
-            return true;
+
+            var basket = await session.LoadAsync<ShoppingCart>(userName, cancellationToken);
+            return basket == null; 
         }
     }
 }
