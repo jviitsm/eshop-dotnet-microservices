@@ -22,14 +22,7 @@
         {
             logger.LogInformation($"CreateProductCommandHandler.Handle called with {command}");
 
-            var product = new Product
-            {
-                Name = command.Name,
-                Category = command.Category,
-                Description = command.Description,
-                ImageFile = command.ImageFile,
-                Price = command.Price
-            };
+            var product = Product.ProductFactory.Create(command.Name, command.Category, command.Description, command.ImageFile, command.Price);
 
             session.Store(product);
             await session.SaveChangesAsync(cancellationToken);

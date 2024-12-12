@@ -30,12 +30,8 @@
             if (product is null)
                 throw new ProductNotFoundException(command.Id);
 
-
-            product.Name = command.Name;
-            product.Category = command.Category;
-            product.Description = command.Description;
-            product.ImageFile = command.ImageFile;
-            product.Price = command.Price;
+            product.UpdateProductDetails(command.Name, command.Category, command.Description, command.ImageFile);
+            product.UpdateProductPrice(command.Price);
 
             session.Update(product);
             await session.SaveChangesAsync(cancellationToken);
