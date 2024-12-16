@@ -23,8 +23,10 @@ namespace Discount.Grpc.Services
 
         public override async Task<CouponModel> CreateDiscount(CreateDiscountRequest request, ServerCallContext context)
         {
-            var coupon = request.Coupon?.Adapt<Coupon>()
-                ?? throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid Discount Request"));
+            if (request.Coupon == null || string.IsNullOrWhiteSpace(request.Coupon.ProductName))
+                throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid Discount Request: ProductName is required"));
+
+            var coupon = request.Coupon.Adapt<Coupon>();
 
             await discountContext.Coupons.AddAsync(coupon);
             await discountContext.SaveChangesAsync();
@@ -34,14 +36,39 @@ namespace Discount.Grpc.Services
             return coupon.Adapt<CouponModel>();
         }
 
-        public override Task<CouponModel> UpdateDiscount(UpdateDiscountRequest request, ServerCallContext context)
+
+        public override async Task<CouponModel> UpdateDiscount(UpdateDiscountRequest request, ServerCallContext context)
         {
-            return base.UpdateDiscount(request, context);
+            if (string.IsNullOrWhiteSpace(request.Coupon?.ProductName))
+                throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid Discount Request: ProductName is required"));
+
+            var existingCoupon = await discountContext.Coupons
+                .FirstOrDefaultAsync(c => c.ProductName == request.Coupon.ProductName)
+                ?? throw new RpcException(new Status(StatusCode.NotFound, $"Discount with ProductName: {request.Coupon.ProductName} not found"));
+
+            existingCoupon.Amount = request.Coupon.Amount;
+            existingCoupon.Description = request.Coupon.Description;
+
+            discountContext.Coupons.Update(existingCoupon);
+            await discountContext.SaveChangesAsync();
+
+            logger.LogInformation("Discount updated: ProductName={ProductName}", existingCoupon.ProductName);
+
+            return existingCoupon.Adapt<CouponModel>();
         }
 
-        public override Task<DeleteDiscountResponse> DeleteDiscount(DeleteDiscountRequest request, ServerCallContext context)
+        public override async Task<DeleteDiscountResponse> DeleteDiscount(DeleteDiscountRequest request, ServerCallContext context)
         {
-            return base.DeleteDiscount(request, context);
+            var coupon = await discountContext.Coupons
+                .FirstOrDefaultAsync(c => c.ProductName == request.ProductName)
+                ?? throw new RpcException(new Status(StatusCode.NotFound, $"Discount with ProductName={request.ProductName} not found"));
+
+            discountContext.Coupons.Remove(coupon);
+            await discountContext.SaveChangesAsync();
+
+            logger.LogInformation("Discount deleted: ProductName={ProductName}", coupon.ProductName);
+
+            return new DeleteDiscountResponse { Success = true };
         }
     }
 }
